@@ -1,0 +1,374 @@
+{
+    "AWSTemplateFormatVersion": "2010-09-09",
+    "Metadata": {
+        "AWS::CloudFormation::Designer": {
+            "9b5828ab-b687-4f4d-895e-182c78e964b8": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 390,
+                    "y": 150
+                },
+                "z": 1,
+                "embeds": [],
+                "dependson": [
+                    "b884d6cd-b71d-447b-bce3-f77ff11fe265"
+                ]
+            },
+            "27471d66-755d-4d3f-a635-6e4a48360fc5": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 510,
+                    "y": 150
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "53bdf032-5cd1-42bc-8dc4-41cf9d3a564f": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 330,
+                    "y": 240
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "42aca68a-b692-4019-8342-54e8c2dae77d": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 240,
+                    "y": 150
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "b884d6cd-b71d-447b-bce3-f77ff11fe265": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 210,
+                    "y": 240
+                },
+                "z": 1,
+                "embeds": []
+            },
+            "292ad6ac-1e15-490c-8aa1-329246e00533": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 60,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": [],
+                "isassociatedwith": [
+                    "b884d6cd-b71d-447b-bce3-f77ff11fe265"
+                ]
+            },
+            "2db2c4d7-64ba-4f2c-b685-9bde1a548e80": {
+                "size": {
+                    "width": 60,
+                    "height": 60
+                },
+                "position": {
+                    "x": 600,
+                    "y": 90
+                },
+                "z": 1,
+                "embeds": []
+            }
+        }
+    },
+    "Resources": {
+        "EC2LT13ARN": {
+            "Type": "AWS::EC2::LaunchTemplate",
+            "Properties": {
+                "LaunchTemplateName": {
+                    "Fn::Sub": "lt-${ProductFamily}"
+                },
+                "LaunchTemplateData": {
+                    "InstanceType": {
+                        "Ref": "InstanceTypeParameter"
+                    },
+                    "ImageId": {
+                        "Ref": "AMIBaseImage"
+                    },
+                    "KeyName": {
+                        "Ref": "EC2KeyPairParameter"
+                    },
+                    "SecurityGroupIds": {
+                        "Ref": "SecurityGroup"
+                    },
+                    "TagSpecifications": [
+                        {
+                            "ResourceType": "instance",
+                            "Tags": [
+                                {
+                                    "Key": "os",
+                                    "Value": "windows"
+                                }
+                            ]
+                        }
+                    ],
+                    "IamInstanceProfile": {
+                        "Arn": {
+                            "Fn::GetAtt": [
+                                "MyInstanceProfile",
+                                "Arn"
+                            ]
+                        }
+                    },
+                    "UserData": {
+                        "Fn::Base64": {
+                            "Fn::Join": [
+                                "\n",
+                                [
+                                    "<powershell>",
+                                    {
+                                        "Fn::Sub": "c:\\temp\\adJoin.ps1 cls-${ProductFamily}-${Environment} ${HostPrefix} ${ADGroup} ${AWS::AccountId}"
+                                    },
+                                    "</powershell>",
+                                    "<persist>true</persist>"
+                                ]
+                            ]
+                        }
+                    }
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "9b5828ab-b687-4f4d-895e-182c78e964b8"
+                }
+            },
+            "DependsOn": [
+                "ECSRole"
+            ]
+        },
+        "ASASG19S6O": {
+            "Type": "AWS::AutoScaling::AutoScalingGroup",
+            "Properties": {
+                "AutoScalingGroupName": {
+                    "Fn::Sub": "asg-${ProductFamily}"
+                },
+                "MinSize": {
+                    "Ref": "InitialClusterSize"
+                },
+                "MaxSize": {
+                    "Ref": "InitialClusterSize"
+                },
+                "HealthCheckGracePeriod": 300,
+                "LaunchTemplate": {
+                    "LaunchTemplateId": {
+                        "Ref": "EC2LT13ARN"
+                    },
+                    "Version": {
+                        "Fn::GetAtt": [
+                            "EC2LT13ARN",
+                            "LatestVersionNumber"
+                        ]
+                    }
+                },
+                "VPCZoneIdentifier": {
+                    "Ref": "Subnets"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "27471d66-755d-4d3f-a635-6e4a48360fc5"
+                }
+            }
+        },
+        "ECSC2CHLA": {
+            "Type": "AWS::ECS::Cluster",
+            "Properties": {
+                "ClusterName": {
+                    "Fn::Sub": "cls-${ProductFamily}-${Environment}"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "53bdf032-5cd1-42bc-8dc4-41cf9d3a564f"
+                }
+            }
+        },
+        "AutoJoinSecret": {
+            "Type": "AWS::SecretsManager::Secret",
+            "Properties": {
+                "Name": "ec2autojoin",
+                "Description": "credentials for joining ec2 instances to tmk domain",
+                "SecretString": {
+                    "Fn::Sub": "{\"username\":\"${ADAutoJoin}\",\"password\":\"update-password\"}"
+                },
+                "Tags": [
+                    {
+                        "Key": "Product",
+                        "Value": {
+                            "Ref": "ProductFamily"
+                        }
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "42aca68a-b692-4019-8342-54e8c2dae77d"
+                }
+            }
+        },
+        "MySecretResourcePolicy": {
+            "Type": "AWS::SecretsManager::ResourcePolicy",
+            "Properties": {
+                "BlockPublicPolicy": "True",
+                "SecretId": {
+                    "Ref": "AutoJoinSecret"
+                },
+                "ResourcePolicy": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "AWS": {
+                                    "Fn::GetAtt": [
+                                        "ECSRole",
+                                        "Arn"
+                                    ]
+                                }
+                            },
+                            "Action": "secretsmanager:*",
+                            "Resource": "*"
+                        }
+                    ]
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "2db2c4d7-64ba-4f2c-b685-9bde1a548e80"
+                }
+            }
+        },
+        "ECSRole": {
+            "Type": "AWS::IAM::Role",
+            "Properties": {
+                "RoleName": "ecsInstanceRole",
+                "AssumeRolePolicyDocument": {
+                    "Version": "2012-10-17",
+                    "Statement": [
+                        {
+                            "Effect": "Allow",
+                            "Principal": {
+                                "Service": "ec2.amazonaws.com"
+                            },
+                            "Action": "sts:AssumeRole"
+                        }
+                    ]
+                },
+                "ManagedPolicyArns": [
+                    "arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess",
+                    "arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role"
+                ],
+                "PermissionsBoundary": {
+                    "Fn::Sub": "arn:aws:iam::${AWS::AccountId}:policy/Boundary_Policy"
+                }
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "b884d6cd-b71d-447b-bce3-f77ff11fe265"
+                }
+            }
+        },
+        "MyInstanceProfile": {
+            "Type": "AWS::IAM::InstanceProfile",
+            "Properties": {
+                "Path": "/",
+                "Roles": [
+                    {
+                        "Ref": "ECSRole"
+                    }
+                ]
+            },
+            "Metadata": {
+                "AWS::CloudFormation::Designer": {
+                    "id": "292ad6ac-1e15-490c-8aa1-329246e00533"
+                }
+            }
+        }
+    },
+    "Parameters": {
+        "ADGroup": {
+            "Type": "String",
+            "Description": "Active Directory Group for GMSA Access, armp_"
+        },
+        "HostPrefix": {
+            "Type": "String",
+            "Default": "AWTMPRDOKPOC"
+        },
+        "InstanceTypeParameter": {
+            "Type": "String",
+            "Default": "t3a.medium",
+            "Description": "Enter instance type. Default is t3a.medium."
+        },
+        "AMIBaseImage": {
+            "Type": "String",
+            "Description": "AMI to use for Launch Template"
+        },
+        "InitialClusterSize": {
+            "Type": "String",
+            "Default": "0",
+            "Description": "Initial Nodes in Cluster, default is 0."
+        },
+        "EC2KeyPairParameter": {
+            "Type": "AWS::EC2::KeyPair::KeyName",
+            "Description": "Key Pair for RDP access to EC2 Instances"
+        },
+        "VpcId": {
+            "Type": "AWS::EC2::VPC::Id",
+            "Description": "VpcId of your existing Virtual Private Cloud (VPC)",
+            "ConstraintDescription": "must be the VPC Id of an existing Virtual Private Cloud."
+        },
+        "Subnets": {
+            "Type": "List<AWS::EC2::Subnet::Id>",
+            "Description": "The list of SubnetIds in your Virtual Private Cloud (VPC)",
+            "ConstraintDescription": "must be a list of at least two existing subnets associated with at least two different availability zones. They should be residing in the selected Virtual Private Cloud."
+        },
+        "Environment": {
+            "Type": "String",
+            "Default": "dev",
+            "AllowedValues": [
+                "dev",
+                "tst",
+                "stg",
+                "prd"
+            ],
+            "Description": "Enter Deployment Environment, dev, test, stage or prod. Default is dev"
+        },
+        "ProductFamily": {
+            "Type": "String",
+            "MinLength": 3,
+            "Description": "Enter Product Family Resources will Support, a grouping of applications"
+        },
+        "SecurityGroup": {
+            "Type": "List<AWS::EC2::SecurityGroup::Id>",
+            "Description": "Choose RDP and default Security Group"
+        },
+        "ADAutoJoin": {
+            "Type": "String",
+            "MinLength": 3,
+            "Description": "Enter AD AutoJoin ID, do not include domain"
+        }
+    }
+}
