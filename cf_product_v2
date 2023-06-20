@@ -368,7 +368,7 @@
         "ADAutoJoin": {
             "Type": "String",
             "MinLength": 3,
-            "Description": "Enter AD AutoJoin ID, do not include domain"
+            "Description": "Enter Active Directory AutoJoin ID, do not include domain"
         }
     }
 }
